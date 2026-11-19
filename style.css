@@ -168,3 +168,29 @@ footer ul {
   font-size: 1.25rem;
   color: var(--muted);
 }
+
+#experience article, 
+#education article {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+#experience article:last-child,
+#education article:last-child {
+    border-bottom: none;
+}
+
+#experience h3,
+#education h3 {
+    margin: 0;
+}
+
+.meta {
+    margin: 0.25rem 0 0.75rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+#experience li {
+    margin-bottom: 0.4rem;
+}
