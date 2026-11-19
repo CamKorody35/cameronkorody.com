@@ -42,21 +42,11 @@ nav {
     }
 }
 
-main > section:first-child {
-   padding: 4rem 0 34rem;
-}
-
 h1 {
-    font-size: clamp(2.25rem, 6vw, 3.5rem);
-    line-height: 1.1;
-    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    margin: 2rem 0 0.5rem;
 }
 
-main > section:first-child p {
-    font-size: 1.25 rem;
-    color: var(--muted);
-    max-width: 40ch;;
-}
 
 a {
     color: var(--accent);
@@ -162,4 +152,19 @@ footer ul {
     display: flex;
     gap: 1.25rem;
     padding-bottom: 0;
+}
+
+.hero {
+  padding: 4rem 0 3rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+}
+
+.hero p {
+  font-size: 1.25rem;
+  color: var(--muted);
 }
