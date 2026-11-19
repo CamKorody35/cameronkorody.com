@@ -62,6 +62,51 @@ a {
     color: var(--accent);
 }
 
+#about img {
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 12px;
+}
+
+@media (min-width: 640px) {
+    #about {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 0.5rem 2rem;
+        align-items: start;
+    }
+
+    #about h2 {
+        grid-column: 1 / -1;
+    }
+}
+
+#work {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    padding: 2rem 0;
+}
+
+#work h2 {
+    grid-column: 1 / -1;
+}
+
+#work article {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+#work h3 {
+    margin-top: 0;
+}
+
 header {
     border-bottom: 1px solid var(--border);
 }
