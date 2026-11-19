@@ -61,3 +61,60 @@ main > section:first-child p {
 a {
     color: var(--accent);
 }
+
+header {
+    border-bottom: 1px solid var(--border);
+}
+
+nav {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+nav a {
+    color: var (--muted);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+nav a:hover,
+nav a[aria-current="page"] {
+    color: var(--text);
+}
+
+nav a:first-child {
+    margin-right: auto;
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+footer {
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+}
+
+footer p,
+footer ul {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem 1.25rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+footer ul {
+    list-style: none;
+    display: flex;
+    gap: 1.25rem;
+    padding-bottom: 0;
+}
