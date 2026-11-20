@@ -194,3 +194,12 @@ footer ul {
 #experience li {
     margin-bottom: 0.4rem;
 }
+
+#bits {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  mask-image: linear-gradient(to right, black 0%, transparent 30%, transparent 70%, black 90%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, transparent 30%, transparent 70%, black 90%);
+}
