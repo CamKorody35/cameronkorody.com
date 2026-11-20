@@ -203,3 +203,31 @@ footer ul {
   mask-image: linear-gradient(to right, black 0%, transparent 30%, transparent 70%, black 90%);
   -webkit-mask-image: linear-gradient(to right, black 0%, transparent 30%, transparent 70%, black 90%);
 }
+
+.report {
+  max-width: 70ch;
+  padding: 2rem 0;
+}
+
+.report-header {
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.report h2 {
+  margin-top: 2.5rem;
+}
+
+pre {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+}
