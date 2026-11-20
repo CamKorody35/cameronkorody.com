@@ -101,17 +101,8 @@ a {
     margin-top: 0;
 }
 
-nav {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1rem 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
 nav a {
-    color: var (--muted);
+    color: var(--muted);
     text-decoration: none;
     font-weight: 500;
 }
