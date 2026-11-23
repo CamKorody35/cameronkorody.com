@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USB Rubber Ducky lab report | Cameron Korody</title>
+  <meta name="description" content="A controlled USB HID injection attack on macOS: reconnaissance, LaunchAgent persistence and exfiltration, with detection and remediation for each stage.">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/bits.js" defer></script>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/apple-touch-icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+  <canvas id="bits" aria-hidden="true"></canvas>
+  <header>
+    <nav>
+      <a href="/">cameronkorody</a>
+      <a href="/research/" aria-current="page">Research</a>
+      <a href="/resume/">Resume</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="report">
+      <header class="report-header">
+        <p class="meta"><a href="/research/">&larr; Research</a></p>
+        <h1>USB Rubber Ducky lab report</h1>
+        <p class="meta">Published <time datetime="2026-11-23">November 23, 2026</time> &middot; Cameron Korody</p>
+        <a href="/research/usb-hid/usb-hid-report.pdf" target="_blank" rel="noopener noreferrer">Download PDF</a>
+      </header>
+
+      <div class="report-photos">
+        <figure>
+          <img src="/research/usb-hid/images/ducky-internals.jpg" alt="USB Rubber Ducky with its case opened, showing the circuit board and microSD card, resting on a MacBook" width="850" height="599">
+        </figure>
+        <figure>
+          <img src="/research/usb-hid/images/ducky-on-macbook.jpg" alt="USB Rubber Ducky in its red flash-drive style case, resting on a MacBook" width="953" height="797" loading="lazy">
+        </figure>
+      </div>
+
+      <section>
+        <h2>Executive summary</h2>
+        <p>In this report I document a controlled demonstration of a USB HID Injection attack on my personally owned hardware. Using a USB Rubber Ducky from Hak5, I extracted network interface configurations, saved SSIDs, Wi-Fi information, Bluetooth information, paired device data, and hardware identifiers &ndash; all without escalated privileges. All data is compiled into a single text file and exfiltrated to a remote listener, then deleted from the target &ndash; leaving minimal forensic evidence on the target device. Additionally, upon every user login the data is reacquired and retransmitted to the remote listener &ndash; even after the USB has been removed. USB device control policies, physical port restrictions and periodic persistence scanning can be used to minimize this attack vector.</p>
+        <p><strong>Disclaimer:</strong> Everything shown in this lab was conducted on authorized equipment in a secured and controlled environment.</p>
+      </section>
+
+      <section>
+        <h2>Tools and lab environment</h2>
+        <h3>Hardware</h3>
+        <ul>
+          <li>USB Rubber Ducky from Hak5 (MicroSD card included)</li>
+          <li>MacBook Pro (2024 M4 Pro)</li>
+        </ul>
+        <h3>Software / tools</h3>
+        <ul>
+          <li>Hak5 Payload Studio Pro &ndash; Compiler for DuckyScript</li>
+          <li>macOS 26.6.2</li>
+          <li>Native macOS CLI tools:
+            <ul>
+              <li><code>system_profiler</code></li>
+              <li><code>networksetup</code></li>
+              <li><code>ifconfig</code></li>
+              <li><code>bash</code></li>
+              <li><code>launchctl</code></li>
+              <li><code>nc</code> (netcat)</li>
+              <li><code>nano</code>, <code>echo</code>, <code>rm</code> (basic shell utilities)</li>
+            </ul>
+          </li>
+          <li>KnockKnock by Objective-See</li>
+        </ul>
+        <h3>Receiving / listener infrastructure</h3>
+        <ul>
+          <li>AWS EC2 instance (Amazon Linux, us-east-2)</li>
+          <li>TCP Port 4444</li>
+        </ul>
+        <h3>Lab environment</h3>
+        <ul>
+          <li>All testing was performed on personally owned hardware.</li>
+          <li>Target device was connected via personal hotspot; listener infrastructure hosted on AWS EC2 in us-east-2 (Ohio).</li>
+          <li>No third-party networks or data were involved in the testing.</li>
+          <li>macOS was tested in default configuration with no additional hardening applied.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Methodology</h2>
+        <h3>Phase 1 &ndash; Pre-attack setup &amp; payload development</h3>
+        <ul>
+          <li>I used DuckyScript in Hak5 Payload Studio Pro to develop the payload.</li>
+          <li>The payload was compiled to <code>inject.bin</code> and loaded onto a MicroSD card inserted on the USB.</li>
+          <li>The shell script (<code>systemhealth.sh</code>) was developed and manually tested in my Terminal prior to the Ducky deployment.</li>
+          <li>Configure Netcat on the AWS EC2 to listen for traffic on port 4444.</li>
+        </ul>
+        <h3>Phase 2 &ndash; Initial access</h3>
+        <ul>
+          <li>The USB Rubber Ducky was inserted into target MacBook Pro.</li>
+          <li>The target MacBook Pro enumerates the USB Rubber Ducky as a HID keyboard automatically.</li>
+          <li>The payload is then executed by the target MacBook &ndash; Terminal opened, heredoc wrote <code>systemhealth.sh</code> to <code>/tmp/</code></li>
+          <li>Script is executed immediately upon writing.</li>
+        </ul>
+        <h3>Phase 3 &ndash; Reconnaissance</h3>
+        <ul>
+          <li>The native macOS CLI tools are silently queried.</li>
+          <li>The output of the commands is compiled into a single text file located in <code>/tmp/systemhealth.txt</code>
+            <ul>
+              <li><em>The Commands collected hardware identifiers, network interface configurations, saved SSIDs, Wi-Fi details, and paired Bluetooth device information.</em></li>
+            </ul>
+          </li>
+        </ul>
+        <h3>Phase 4 &ndash; Persistence</h3>
+        <ul>
+          <li>A LaunchAgent plist titled <code>com.apple.systemhealth.plist</code> is written to <code>~/Library/LaunchAgents/</code></li>
+          <li>This plist is automatically registered to launch on the next login.</li>
+          <li>The script continues to execute every subsequent login.</li>
+        </ul>
+        <h3>Phase 5 &ndash; Exfiltration</h3>
+        <ul>
+          <li>Data is transmitted via netcat to AWS EC2 listener on TCP port 4444.
+            <ul>
+              <li><em>This data is transmitted unencrypted over the public internet via netcat. In a real-world scenario, an attacker would most likely choose to use HTTPS or DNS exfiltration to blend in with normal traffic.</em></li>
+            </ul>
+          </li>
+          <li>The bash script automatically deletes the <code>/tmp/systemhealth.txt</code> file after transmission.</li>
+        </ul>
+        <h3>Phase 6 &ndash; Clean up</h3>
+        <ul>
+          <li>The USB is removed from the target device.</li>
+          <li>The <code>/tmp/systemhealth.txt</code> output file is deleted after transmission, leaving minimal loot on the target device.</li>
+          <li><code>com.apple.systemhealth</code> remains in the <code>~/Library/LaunchAgents</code> ready to run on each log in.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Technical findings</h2>
+
+        <h3>Finding 1 &ndash; HID device enumeration</h3>
+        <ul>
+          <li>macOS automatically trusts the USB Rubber Ducky as a keyboard with no user prompt.</li>
+        </ul>
+
+        <h3>Finding 2 &ndash; Hardware identification</h3>
+        <pre><code>system_profiler SPHardwareDataType</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding2-hardware.png" alt="Terminal output of system_profiler SPHardwareDataType with the serial number, hardware UUID and provisioning UDID redacted" width="1600" height="830" loading="lazy">
+        </figure>
+        <p>The console returns sensitive hardware information such as the device serial number, hardware universally unique identifier (UUID), and model information. Additionally, the output provides device information such as CPU, total number of cores, amount of memory, firmware version being run, etc.</p>
+        <p><strong>Impact:</strong> The serial number and UUID can uniquely identify the device and possibly the owner and additional descriptive information can assist attackers in finding known device vulnerabilities.</p>
+
+        <h3>Finding 3 &ndash; Network interface enumeration</h3>
+        <pre><code>ifconfig en0
+curl -4 ifconfig.me
+curl -6 ifconfig.me</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding3-ifconfig.png" alt="Terminal output of ifconfig en0 and curl ifconfig.me with the MAC address and IP addresses redacted" width="1600" height="665" loading="lazy">
+        </figure>
+        <p>The console returns interface configurations for &ldquo;Ethernet Interface 0&rdquo; which includes the media access control (MAC) address for network interface card (NIC) on the device. Additionally, IPv4 and IPv6 addresses configured on that interface are collected along with the subnet mask and broadcast address. To ensure the public IPv4 and IPv6 addresses are captured, the <em>-4 ifconfig.me</em> and <em>curl -6 ifconfig.me</em> commands are also used.</p>
+        <p><strong>Impact:</strong> Attackers can use the information from these commands to launch a multitude of attacks such as MAC spoofing, Denial of Service (DoS), Man-in-the-Middle, network mapping (from the private IPv4), and more.</p>
+
+        <h3>Finding 4 &ndash; Saved Wi-Fi networks</h3>
+        <pre><code>networksetup -listpreferredwirelessnetworks en0</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding4-saved-ssids.png" alt="Terminal output listing preferred wireless networks on en0, with all network names redacted" width="1600" height="932" loading="lazy">
+        </figure>
+        <p>The console returns all networks the device has joined on its ethernet interface 0.</p>
+        <p><strong>Impact:</strong> An attacker can use these saved SSIDs to conduct evil twin attacks and steal user credentials.</p>
+
+        <h3>Finding 5 &ndash; Wi-Fi hardware information</h3>
+        <pre><code>system_profiler SPAirPortDataType</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding5-wifi.png" alt="Terminal output of system_profiler SPAirPortDataType showing Wi-Fi firmware, supported channels and nearby networks, with network names and MAC addresses redacted" width="1600" height="960" loading="lazy">
+        </figure>
+        <p>The console returns Wi-Fi hardware device information such as MAC addresses, 802.11 operating channels, Wi-Fi hardware information for known (redacted) SSIDs, the Apple Wireless Direct Link (AWDL) MAC address, etc.</p>
+        <p><strong>Impact:</strong> This information can be used by an attacker to find known firmware vulnerabilities or tailor radio frequencies to conduct an evil-twin attack on specific hardware.</p>
+
+        <h3>Finding 6 &ndash; Bluetooth paired devices</h3>
+        <pre><code>system_profiler SPBluetoothDataType</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding6-bluetooth.png" alt="Terminal output of system_profiler SPBluetoothDataType listing paired devices, with Bluetooth addresses and serial numbers redacted" width="1554" height="1224" loading="lazy">
+        </figure>
+        <p>The console returned Bluetooth controller addresses for every Bluetooth device saved on the target. Additional information from the target device&rsquo;s Bluetooth controller is provided along with serial numbers for specific devices.</p>
+        <p><strong>Impact:</strong> Paired device names and addresses can expand an attacker&rsquo;s attack vector. The attacker can use this information to spoof or impersonate trusted peripherals to gain additional information.</p>
+
+        <h3>Finding 7 &ndash; Cleartext exfiltration / no egress control</h3>
+        <pre><code># from EC2
+nc -lvp 4444</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding7-listener.png" alt="Ncat listener on the AWS EC2 instance receiving the exfiltrated device and IP information" width="1600" height="890" loading="lazy">
+        </figure>
+        <p>The command above sets the EC2 as a remote listener. Prior to conducting the attack, all the attacker needs to do is change the public IP address to their listening device and wait for the information to come in. If the attacker leaves the listener running, these processes will reoccur every time the victim turns their device on &ndash; meaning the attacker can track any changes.</p>
+        <p><strong>Impact:</strong> This allows an attacker to conduct this attack remotely or even conduct a mass USB drop attack and wait for the information to come into their listener.</p>
+
+        <h3>Finding 8 &ndash; Persistence</h3>
+        <pre><code>launchctl list | grep systemhealth
+ls ~/Library/LaunchAgents/</code></pre>
+        <figure>
+          <img src="/research/usb-hid/images/finding8-launchctl.png" alt="Terminal output of launchctl list piped to grep, showing com.apple.systemhealth loaded" width="1118" height="324" loading="lazy">
+        </figure>
+        <figure>
+          <img src="/research/usb-hid/images/finding8-launchagents.png" alt="Terminal output of ls ~/Library/LaunchAgents showing com.apple.systemhealth.plist" width="1112" height="166" loading="lazy">
+        </figure>
+        <p>The console returns the <code>com.apple.systemhealth.plist</code>, showing it was added to the LaunchAgents without error.</p>
+        <p><strong>Impact:</strong> This is the key portion of the attack, persistence. Since the <code>com.apple.systemhealth</code> plist was added to the LaunchAgents, every login of the victim&rsquo;s device will rerun the attack.</p>
+      </section>
+
+      <section>
+        <h2>Detection &amp; remediation</h2>
+        <p>Throughout each stage of the attack chain, there is a different opportunity to detect or block it. The controls below are organized by vector:</p>
+
+        <h3>HID injection / untrusted keyboard</h3>
+        <ul>
+          <li>On updated macOS, there are settings that can be turned on that require approval before a newly connected USB accessory may communicate.</li>
+          <li>Enforcing a USB device-control policy through Mobile Device Management or Endpoint Detection and Response allowlists can be used to block unrecognized HID devices.</li>
+          <li>Physical restriction and blocking of ports in high-security areas and a short screen-lock out can also be highly effective.</li>
+        </ul>
+
+        <h3>Payload execution</h3>
+        <ul>
+          <li>Using Mobile Device Management to restrict end-user access to the Terminal.</li>
+          <li>Non-admin users should follow the security principal of least privilege to limit follow-on actions and data exposure.</li>
+        </ul>
+
+        <h3>Reconnaissance</h3>
+        <ul>
+          <li>Endpoint Detection and Response alert for anomalous patterns, such as a GUI-launched Terminal followed by a rapid burst of profiling commands writing to a <code>/tmp</code> file and opening an outbound connection.</li>
+          <li>Centralize logging and endpoint telemetry so the sequence can be reconstructed and reviewed after the attack occurs.</li>
+        </ul>
+
+        <h3>Persistence</h3>
+        <ul>
+          <li>Monitor the <code>~/Library/LaunchAgents</code> and <code>/Library/LaunchAgents</code> for new or modified plists. Utilization of a 3rd party tool (such as KnockKnock) can assist in spotting these new/modified plists.</li>
+          <li>Baseline persistence items through Mobile Device Management and Endpoint Detection and Response.</li>
+        </ul>
+        <figure>
+          <img src="/research/usb-hid/images/knockknock.png" alt="KnockKnock scan showing the com.apple.systemhealth.plist LaunchAgent running /bin/bash" width="1600" height="1034" loading="lazy">
+        </figure>
+
+        <h3>Exfiltration</h3>
+        <ul>
+          <li>Apply egress filtering at the host and network levels. This can be done by using a host-based firewall or outbound monitoring tool which will prevent the unexpected outbound connection from bash or netcat.</li>
+          <li>Network IDS and firewall rules can be used to flag plaintext traffic to uncommon ports and connections to unknown external IP addresses.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Conclusion</h2>
+        <p>This lab demonstrates the vulnerability of a macOS endpoint under default configuration to a USB HID Injection attack. A short USB insertion can leave a Mac vulnerable to persistent threats upon every reboot (even after device removal) and remote exfiltration without any privilege escalation or user interaction beyond an unlocked session. The payload relied on a trusted keyboard enumeration, native command-line tooling, a LaunchAgent creation, and a plaintext network channel.</p>
+      </section>
+
+      <section>
+        <h2>Lessons learned</h2>
+        <ul>
+          <li>Physical device access remains decisive, just a few seconds with an unlocked machine can lead to persistent code execution and exfiltration.</li>
+          <li>Defense in depth is key, and no single control is sufficient to stop a motivated attacker.</li>
+          <li>Default configurations are a weak point in security and enabling a few simple rules can result in a successful or failed attack.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Appendix A &ndash; Persistence artifacts</h2>
+        <p>The LaunchAgent property list (plist) written during Phase 4 of the attack is shown below.</p>
+        <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;Label&lt;/key&gt;
+    &lt;string&gt;com.apple.systemhealth&lt;/string&gt;
+    &lt;key&gt;ProgramArguments&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;/bin/bash&lt;/string&gt;
+        &lt;string&gt;/tmp/systemhealth.sh&lt;/string&gt;
+    &lt;/array&gt;
+    &lt;key&gt;RunAtLoad&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;KeepAlive&lt;/key&gt;
+    &lt;false/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+      </section>
+
+      <section>
+        <h2>Appendix B &ndash; Reconnaissance/exfiltration script</h2>
+        <p>The screenshot below shows the <code>/tmp/systemhealth.sh</code> script. In the screenshot you can see each command being run in the script to gather system information. Towards the bottom of the screenshot, you will see where the netcat is called to send out the acquired data. After the data is exfiltrated, the script deletes the <code>/tmp/systemhealth.txt</code> file to make detection that much more difficult.</p>
+        <figure>
+          <img src="/research/usb-hid/images/appendix-b-script.png" alt="Contents of /tmp/systemhealth.sh showing the profiling commands, the netcat transmission with the destination redacted, and the rm cleanup" width="1514" height="626" loading="lazy">
+        </figure>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <ul>
+      <li><a href="https://github.com/CamKorody35" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      <li><a href="https://www.linkedin.com/in/cameronkorody" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+    </ul>
+    <p>&copy; 2026 Cameron Korody</p>
+  </footer>
+</body>
+</html>
