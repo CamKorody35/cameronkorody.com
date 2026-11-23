@@ -249,3 +249,51 @@ code {
 .button:hover {
   opacity: 0.85;
 }
+
+.report figure {
+  margin: 1.25rem 0;
+}
+
+.report img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.report h3 {
+  margin-top: 1.75rem;
+}
+
+.report ul ul {
+  margin-top: 0.25rem;
+}
+
+.report pre {
+  margin: 0.75rem 0;
+}
+
+.report p > code,
+.report li > code {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+.report-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.report-photos figure {
+  margin: 0;
+}
+
+.report-photos img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
